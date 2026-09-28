@@ -19,43 +19,118 @@ The system analyzes user requirements (budget, usage, preferences) and returns p
 
 ## Prerequisites
 
-- SWI-Prolog (9.x recommended)
-- Node.js (v16+)
-- Homebrew (or any similar package manager)
+Both platforms need:
 
-Install SWI-Prolog: download the .dmg/.pkg from the SWI-Prolog site and install.
+- **SWI-Prolog** 9.x or later (`swipl` on your PATH)
+- **Node.js** 16+ (includes `npm`)
 
-Add SWI-Prolog to your PATH (example for zsh):
+Download SWI-Prolog from [swi-prolog.org/download/stable](https://www.swi-prolog.org/download/stable) if you do not use a package manager.
+
+### macOS
+
+1. Install SWI-Prolog (pick one):
+
+   - **Installer:** download the macOS disk image from the SWI-Prolog site, open it, and copy **SWI-Prolog.app** to `/Applications`. Then add it to your PATH:
+
+     ```bash
+     echo 'export PATH="/Applications/SWI-Prolog.app/Contents/MacOS:$PATH"' >> ~/.zshrc
+     source ~/.zshrc
+     ```
+
+   - **Homebrew:**
+
+     ```bash
+     brew install swi-prolog
+     ```
+
+2. Install Node.js (pick one):
+
+   ```bash
+   brew install node
+   ```
+
+   Or download the macOS installer from [nodejs.org](https://nodejs.org/).
+
+3. Check both tools:
+
+   ```bash
+   swipl --version
+   node --version
+   ```
+
+### Windows
+
+1. Install SWI-Prolog: download the Windows installer from the SWI-Prolog site and run it. Default location is `C:\Program Files\swipl\`.
+
+2. Add Prolog to PATH (if `swipl` is not recognised):
+   - Open **Settings → System → About → Advanced system settings → Environment Variables**
+   - Edit **Path** (user or system) and add:
+
+     ```text
+     C:\Program Files\swipl\bin
+     ```
+
+   - Open a **new** Command Prompt or PowerShell window.
+
+3. Install Node.js: download the Windows installer from [nodejs.org](https://nodejs.org/) (LTS) and run it. Tick the option that adds Node to PATH.
+
+   Or with winget:
+
+   ```powershell
+   winget install OpenJS.NodeJS.LTS
+   ```
+
+4. Check both tools:
+
+   ```powershell
+   swipl --version
+   node --version
+   ```
+
+## Installation & running
+
+Clone the repo, then run the backend and frontend in **two terminals**.
 
 ```bash
-echo 'export PATH="/Applications/SWI-Prolog.app/Contents/MacOS:$PATH"' >> ~/.zshrc
-source ~/.zshrc
+git clone https://github.com/Thakshaka/expert-system.git
+cd expert-system
 ```
 
-Verify SWI-Prolog:
+### macOS / Linux (Terminal)
 
-```bash
-swipl --version
-```
-
-Install Node.js (example using Homebrew):
-
-```bash
-brew install node
-```
-
-## Installation & Running
-
-From the project root, run the backend and frontend in separate terminals.
-
-1. Start the backend (Prolog server):
+**Terminal 1 — backend**
 
 ```bash
 cd backend
-swipl -s server.pl -g "server" -t halt
+swipl -s server.pl -g "server, thread_get_message(keep_alive)"
 ```
 
-Expected output:
+**Terminal 2 — frontend**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Windows (Command Prompt or PowerShell)
+
+**Terminal 1 — backend**
+
+```powershell
+cd backend
+swipl -s server.pl -g "server, thread_get_message(keep_alive)"
+```
+
+**Terminal 2 — frontend**
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Expected backend output:
 
 ```text
 === PC Builder Expert System ===
@@ -64,23 +139,7 @@ Server running on http://localhost:8080
 Ready!
 ```
 
-1. Start the frontend:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Vite will typically serve at `http://localhost:5173`.
-
-## Open the Application
-
-Open your browser at:
-
-```text
-http://localhost:5173
-```
+Vite serves the UI at **http://localhost:5173**. Open that URL in a browser. Keep both terminals open while you use the app.
 
 ## How it works
 
@@ -157,13 +216,26 @@ pc-builder-expert-system/
 
 ## Troubleshooting
 
-- Backend won't start: check port availability and running processes:
+- **`swipl` not found:** restart the terminal after installing. On macOS, confirm the PATH line in `~/.zshrc`. On Windows, confirm `C:\Program Files\swipl\bin` is on Path.
 
-```bash
-lsof -i :8080
-kill -9 <PID>
-```
+- **Backend won't start (port 8080 in use)**
 
-- Frontend can't connect to backend: ensure the backend is running on port 8080 and that `API_URL` in the frontend matches the backend port. Verify CORS settings in `server.pl`.
+  macOS / Linux:
+
+  ```bash
+  lsof -i :8080
+  kill -9 <PID>
+  ```
+
+  Windows (PowerShell):
+
+  ```powershell
+  netstat -ano | findstr :8080
+  taskkill /PID <PID> /F
+  ```
+
+- **Frontend can't connect to the backend:** the Prolog server must be running on port 8080. The UI calls `http://localhost:8080/api`. Check CORS in `server.pl` if you changed the host.
+
+- **Server prints Ready! then exits:** start it with `-g "server, thread_get_message(keep_alive)"` as above (do not use `-t halt`).
 
 Built with: SWI-Prolog • React • Vite
