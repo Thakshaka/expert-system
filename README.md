@@ -82,16 +82,29 @@ Open your browser at:
 http://localhost:5173
 ```
 
-## Usage (UI flow)
+## How it works
 
-1. Start the expert consultation
-2. Choose budget (Budget / Mid-Range / High-End / Enthusiast)
-3. Select primary usage (Office / Gaming / Programming / Content Creation)
-4. If applicable, choose gaming level (1080p / 1440p / 4K)
-5. Optionally select CPU preference (Intel / AMD / None)
-6. Choose RGB importance (Very Important / Nice to Have / Don't Care)
-7. Select cooling preference (AIO Liquid / Air Cooling / Either)
-8. View results: component list with build-quality confidence scores, explanations, and reasoning trace
+Answer a short questionnaire. Prolog infers extra facts, then picks a compatible CPU, motherboard, RAM, GPU, storage, PSU, and case.
+
+![Home](docs/assignment/screenshots/home.png)
+
+### 1. Questions
+
+Budget, primary use, gaming resolution (if needed), CPU brand, RGB, and cooling. One screen at a time.
+
+![Questions](docs/assignment/screenshots/questions.png)
+
+### 2. Inference
+
+The engine applies the rules in dependency order (CPU → board → RAM → GPU → storage → PSU → case).
+
+![Generating](docs/assignment/screenshots/generating.png)
+
+### 3. Recommended build
+
+You get a parts list with prices and match scores. **Why this part** explains a choice. **Alternatives** lets you swap a component. **Show reasoning** is the Prolog trace.
+
+![Results](docs/assignment/screenshots/results.png)
 
 ## Project Structure
 
@@ -135,7 +148,9 @@ pc-builder-expert-system/
 │               ├── PageLayout.jsx
 │               └── SpecBox.jsx
 
+├── docs/assignment/screenshots/ # UI screenshots used in this README
 ├── openAPI.yml                  # API specification for backend endpoints
+├── PC-Builder-Expert-System-Report.pdf
 ├── PCBuilderExpertSystem.md     # Detailed "How it works" guide
 └── README.md
 ```
