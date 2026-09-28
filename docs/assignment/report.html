@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>PC Builder Expert System — Assignment Report</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm; }
+    body {
+      font: 11pt/1.45 "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+      color: #1a1814;
+      max-width: 780px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 20pt; font-weight: 600; margin: 0 0 0.3em; }
+    h2 { font-size: 13.5pt; margin: 1.6em 0 0.45em; border-bottom: 1px solid #ccc; padding-bottom: 0.2em; }
+    h3 { font-size: 11.5pt; margin: 1.1em 0 0.35em; }
+    p, li { margin: 0.35em 0; }
+    .meta { color: #555; font-size: 10pt; }
+    .kicker { letter-spacing: 0.08em; text-transform: uppercase; font-size: 9pt; color: #7a5a20; }
+    table { width: 100%; border-collapse: collapse; font-size: 9.4pt; margin: 0.7em 0 1em; }
+    th, td { border: 1px solid #ccc; padding: 0.35em 0.45em; vertical-align: top; text-align: left; }
+    th { background: #f3efe6; }
+    code, pre { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 8.6pt; }
+    pre { background: #f6f4ef; border: 1px solid #ddd; padding: 0.7em 0.8em; overflow: auto; }
+    img { max-width: 100%; height: auto; border: 1px solid #ddd; page-break-inside: avoid; }
+    figcaption { font-size: 9pt; color: #555; margin: 0.25em 0 1em; }
+    .note { font-size: 9.5pt; color: #444; }
+    a { color: #1a4a7a; }
+    .diagram { width: 100%; max-width: 720px; margin: 0.8em 0; }
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+
+<p class="kicker">Logic Programming / Expert Systems</p>
+<h1>PC Builder Expert System</h1>
+<p class="meta">SWI-Prolog inference engine · React questionnaire · Assignment report</p>
+<p class="meta">No expert interview. Every production rule below is taken from a published vendor or standards page, then encoded in Prolog. Sources are listed in Annex A.</p>
+
+<h2>1. What this is</h2>
+<p>A rule-based consultant that asks for budget, use, and a few preferences, then returns a seven-part PC list: CPU, motherboard, RAM, GPU, storage, PSU, and case. The engine is Prolog. The interface is a local web page. Sockets, RAM type, and PSU wattage are checked before parts are scored.</p>
+
+<h2>2. How to run locally</h2>
+<p>Need SWI-Prolog 9+ and Node.js 16+.</p>
+<pre>cd backend
+swipl -s server.pl -g "server, thread_get_message(keep_alive)"</pre>
+<p>Wait for <code>Server running on http://localhost:8080</code>.</p>
+<pre>cd frontend
+npm install
+npm run dev</pre>
+<p>Open <strong>http://localhost:5173</strong>. Answer the questions. The last answer starts inference.</p>
+<p class="note">If <code>swipl</code> is not on PATH (macOS app): <code>export PATH="/Applications/SWI-Prolog.app/Contents/MacOS:$PATH"</code>. If port 8080 is busy: <code>lsof -i :8080</code>.</p>
+<p class="note">Code: this repository (zip or GitHub). The decision logic is in <code>backend/</code>. The UI is in <code>frontend/</code>.</p>
+
+<h2>3. How the system works</h2>
+<p>User answers become Prolog facts. Forward-chaining rules add extra facts (priorities, minimum cores, RAM, GPU tier, PSU floor). Parts are then picked in a fixed order because later parts depend on earlier ones. When several parts fit, a score picks one.</p>
+
+<svg class="diagram" viewBox="0 0 720 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="System flowchart">
+  <rect x="1" y="1" width="718" height="418" fill="#fbfaf6" stroke="#ccc"/>
+  <rect x="20" y="24" width="150" height="46" fill="#fff" stroke="#333"/>
+  <text x="95" y="52" text-anchor="middle" font-size="12" font-family="IBM Plex Sans, sans-serif">UI answers</text>
+  <path d="M170 47 H210" stroke="#333" marker-end="url(#arr)"/>
+  <rect x="210" y="24" width="170" height="46" fill="#fff" stroke="#333"/>
+  <text x="295" y="52" text-anchor="middle" font-size="12" font-family="IBM Plex Sans, sans-serif">Forward chaining</text>
+  <path d="M380 47 H420" stroke="#333" marker-end="url(#arr)"/>
+  <rect x="420" y="24" width="160" height="46" fill="#fff" stroke="#333"/>
+  <text x="500" y="52" text-anchor="middle" font-size="12" font-family="IBM Plex Sans, sans-serif">Min specs lookup</text>
+  <path d="M500 70 V100" stroke="#333" marker-end="url(#arr)"/>
+  <rect x="40" y="108" width="78" height="36" fill="#fff" stroke="#333"/>
+  <text x="79" y="131" text-anchor="middle" font-size="11">CPU</text>
+  <path d="M118 126 H138" stroke="#333" marker-end="url(#arr)"/>
+  <rect x="138" y="108" width="90" height="36" fill="#fff" stroke="#333"/>
+  <text x="183" y="131" text-anchor="middle" font-size="11">Motherboard</text>
+  <path d="M228 126 H248" stroke="#333" marker-end="url(#arr)"/>
+  <rect x="248" y="108" width="70" height="36" fill="#fff" stroke="#333"/>
+  <text x="283" y="131" text-anchor="middle" font-size="11">RAM</text>
+  <path d="M318 126 H338" stroke="#333" marker-end="url(#arr)"/>
+  <rect x="338" y="108" width="70" height="36" fill="#fff" stroke="#333"/>
+  <text x="373" y="131" text-anchor="middle" font-size="11">GPU</text>
+  <path d="M408 126 H428" stroke="#333" marker-end="url(#arr)"/>
+  <rect x="428" y="108" width="78" height="36" fill="#fff" stroke="#333"/>
+  <text x="467" y="131" text-anchor="middle" font-size="11">Storage</text>
+  <path d="M506 126 H526" stroke="#333" marker-end="url(#arr)"/>
+  <rect x="526" y="108" width="62" height="36" fill="#fff" stroke="#333"/>
+  <text x="557" y="131" text-anchor="middle" font-size="11">PSU</text>
+  <path d="M588 126 H608" stroke="#333" marker-end="url(#arr)"/>
+  <rect x="608" y="108" width="70" height="36" fill="#fff" stroke="#333"/>
+  <text x="643" y="131" text-anchor="middle" font-size="11">Case</text>
+  <path d="M360 144 V174" stroke="#333" marker-end="url(#arr)"/>
+  <rect x="210" y="176" width="300" height="44" fill="#fff" stroke="#333"/>
+  <text x="360" y="203" text-anchor="middle" font-size="12">Score candidates · pick highest</text>
+  <path d="M360 220 V250" stroke="#333" marker-end="url(#arr)"/>
+  <rect x="210" y="252" width="300" height="44" fill="#fff" stroke="#333"/>
+  <text x="360" y="279" text-anchor="middle" font-size="12">Build + explanations + alternatives</text>
+  <text x="360" y="330" text-anchor="middle" font-size="11" fill="#444">Never relaxed: socket, RAM type, PSU ≥ safe wattage</text>
+  <text x="360" y="352" text-anchor="middle" font-size="11" fill="#444">May relax: core count, brand preference, budget on PSU only</text>
+  <text x="360" y="390" text-anchor="middle" font-size="10" fill="#666">React UI → POST /api/build → Prolog (chaining.pl, match.pl, recommend.pl, scoring.pl)</text>
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#333"/>
+    </marker>
+  </defs>
+</svg>
+<figcaption>Figure 1. Inference and part-selection order.</figcaption>
+
+<p>Knowledge base: ~72 parts in <code>backend/components.pl</code>, plus compatibility and usage facts in <code>backend/match.pl</code>. Inference: <code>backend/chaining.pl</code> then <code>backend/recommend.pl</code>. Conflict resolution: <code>backend/scoring.pl</code>.</p>
+
+<h2>4. Interface</h2>
+<p>A questionnaire. One question at a time. No Prolog is typed. After the last answer the engine runs and a parts list is shown. “Why this part” calls <code>/api/explain</code>. “Alternatives” calls <code>/api/alternatives</code>. “Show reasoning” shows the Prolog trace.</p>
+
+<figure>
+  <img src="screenshots/home.png" alt="Home page" />
+  <figcaption>Figure 2. Home — start the questionnaire.</figcaption>
+</figure>
+<figure>
+  <img src="screenshots/questions.png" alt="Budget question" />
+  <figcaption>Figure 3. Question screen (budget). Later screens use the same layout for use, resolution, CPU brand, RGB, and cooling.</figcaption>
+</figure>
+<figure>
+  <img src="screenshots/generating.png" alt="Inference in progress" />
+  <figcaption>Figure 4. While the engine runs, the UI lists the same order as Figure 1.</figcaption>
+</figure>
+<figure>
+  <img src="screenshots/results.png" alt="Recommended build" />
+  <figcaption>Figure 5. Result — parts, prices, match scores, reasoning, start over.</figcaption>
+</figure>
+
+<h2>5. Test cases</h2>
+<p>All five were run against <code>POST http://localhost:8080/api/build</code>. Expected checks are the sourced rules (socket, RAM type, cores, RAM size, PSU). Actual output is what the engine returned.</p>
+
+<h3>T1 — Mid-range office</h3>
+<p><strong>Input:</strong> budget=mid_range, usage=office, cpu=none, rgb=dont_care, cooling=either</p>
+<p><strong>Expect:</strong> ≥4 cores, ≥8&nbsp;GB RAM, socket = board, RAM type = board, PSU ≥ GPU TDP + cores×10 + 200&nbsp;W.</p>
+<table>
+  <tr><th>Part</th><th>Chosen</th><th>Check</th></tr>
+  <tr><td>CPU</td><td>Intel Core i5-14600K, 14c, LGA1700, $320</td><td>Cores ≥ 4</td></tr>
+  <tr><td>Board</td><td>ASUS TUF Gaming Z690, LGA1700, DDR5, $250</td><td>Socket match</td></tr>
+  <tr><td>RAM</td><td>Corsair Vengeance 32&nbsp;GB DDR5-5600, $130</td><td>DDR5, ≥ 8&nbsp;GB</td></tr>
+  <tr><td>GPU</td><td>NVIDIA RTX 4070, 200&nbsp;W, $550</td><td>—</td></tr>
+  <tr><td>Storage</td><td>Samsung 980 Pro 1&nbsp;TB NVMe, $120</td><td>NVMe</td></tr>
+  <tr><td>PSU</td><td>EVGA SuperNOVA 850 GT, 850&nbsp;W, $130</td><td>Need 200+140+200=540; 850 ≥ 540</td></tr>
+  <tr><td>Case</td><td>NZXT H510, $80</td><td>—</td></tr>
+</table>
+<p><strong>Result:</strong> $1,580 · 84% · pass.</p>
+
+<h3>T2 — Mid-range 1440p gaming, Intel, AIO</h3>
+<p><strong>Input:</strong> mid_range, gaming, 1440p, intel, rgb=nice_to_have, cooling=aio</p>
+<p><strong>Expect:</strong> Intel CPU, LGA1700 board, ≥6 cores, ≥16&nbsp;GB, GPU at least mid-range tier, case with AIO support.</p>
+<table>
+  <tr><th>Part</th><th>Chosen</th><th>Check</th></tr>
+  <tr><td>CPU</td><td>Intel Core i5-14600K, 14c</td><td>Intel, ≥ 6 cores</td></tr>
+  <tr><td>Board / RAM</td><td>Z690 + 32&nbsp;GB DDR5</td><td>Socket and type match</td></tr>
+  <tr><td>GPU</td><td>NVIDIA RTX 4070 (mid_range)</td><td>Meets 1440p minimum tier</td></tr>
+  <tr><td>Case</td><td>NZXT H510, AIO yes, RGB yes</td><td>AIO support</td></tr>
+</table>
+<p><strong>Result:</strong> $1,580 · 85% · pass. Same mid-range parts as T1 except confidence on CPU/GPU/RAM is higher because of the gaming multipliers.</p>
+
+<h3>T3 — High-end content creation, AMD</h3>
+<p><strong>Input:</strong> high_end, content_creation, amd, rgb=dont_care, cooling=either</p>
+<p><strong>Expect:</strong> AMD CPU, ≥12 cores, ≥32&nbsp;GB, AM5 → DDR5.</p>
+<table>
+  <tr><th>Part</th><th>Chosen</th><th>Check</th></tr>
+  <tr><td>CPU</td><td>AMD Ryzen 9 7900X, 12c, AM5, $500</td><td>AMD, 12 cores</td></tr>
+  <tr><td>Board</td><td>ASUS ROG Strix X670E-E, AM5, DDR5</td><td>AM5 + DDR5</td></tr>
+  <tr><td>RAM</td><td>G.Skill Trident Z5 64&nbsp;GB DDR5</td><td>≥ 32&nbsp;GB</td></tr>
+  <tr><td>GPU / PSU</td><td>RTX 4080 320&nbsp;W · RM1000e 1000&nbsp;W</td><td>Need 320+120+200=640; 1000 ≥ 640</td></tr>
+</table>
+<p><strong>Result:</strong> $2,830 · 93% · pass.</p>
+
+<h3>T4 — Enthusiast 4K gaming, RGB + AIO</h3>
+<p><strong>Input:</strong> enthusiast, gaming, 4k, cpu=none, rgb=very_important, cooling=aio</p>
+<p><strong>Expect:</strong> high-end or enthusiast GPU, large PSU, RGB case with AIO.</p>
+<table>
+  <tr><th>Part</th><th>Chosen</th><th>Check</th></tr>
+  <tr><td>CPU</td><td>AMD Ryzen 9 7950X3D, 16c, AM5</td><td>≥ 6 cores</td></tr>
+  <tr><td>GPU</td><td>NVIDIA RTX 4090, 450&nbsp;W, $1,600</td><td>Enthusiast / 4K class</td></tr>
+  <tr><td>PSU</td><td>Seasonic Prime TX-1300, 1300&nbsp;W</td><td>Need 450+160+200=810; 1300 ≥ 810. NVIDIA lists 850&nbsp;W system power for a 4090.</td></tr>
+  <tr><td>RAM / case</td><td>64&nbsp;GB Dominator RGB · Lian Li O11 (RGB + AIO)</td><td>RGB and AIO</td></tr>
+</table>
+<p><strong>Result:</strong> $4,200 · 96% · pass.</p>
+
+<h3>T5 — Budget office, AMD, air cooling</h3>
+<p><strong>Input:</strong> budget, office, amd, rgb=dont_care, cooling=air</p>
+<p><strong>Expect:</strong> AMD, AM4 or AM5, matching RAM, only budget-tier parts, cheaper than T1.</p>
+<table>
+  <tr><th>Part</th><th>Chosen</th><th>Check</th></tr>
+  <tr><td>CPU</td><td>AMD Ryzen 7 5700X, 8c, AM4, $180</td><td>AMD</td></tr>
+  <tr><td>Board</td><td>Gigabyte B550M DS3H, AM4, DDR4</td><td>AM4 → DDR4 only</td></tr>
+  <tr><td>RAM</td><td>Kingston Fury 16&nbsp;GB DDR4</td><td>DDR4, ≥ 8&nbsp;GB</td></tr>
+  <tr><td>GPU / PSU</td><td>RTX 3060 170&nbsp;W · CX650M 650&nbsp;W</td><td>Need 170+80+200=450; 650 ≥ 450</td></tr>
+  <tr><td>Case</td><td>Corsair 4000D, no RGB</td><td>Budget tier</td></tr>
+</table>
+<p><strong>Result:</strong> $845 · 75% · pass. Cheaper than T1; AM4/DDR4 pairing is the compatibility check.</p>
+
+<h2 class="page-break">Annex A — Production rules and sources</h2>
+<p>These are the rules encoded in the system. They were not invented for the assignment and were not taken from a chatbot. Each row names the Prolog file and the published page the number or constraint comes from.</p>
+
+<table>
+  <tr><th>#</th><th>Rule</th><th>Where encoded</th><th>Source</th></tr>
+  <tr>
+    <td>1</td>
+    <td>IF usage = office THEN min CPU cores = 4</td>
+    <td><code>match.pl</code> <code>usage_needs_cores(office, 4, 0.9)</code></td>
+    <td>Microsoft Windows 11: processor must have 2 or more cores. Encoded as 4, the common desktop i3 SKU (Intel Core i3-12100F, 4 cores). <a href="https://support.microsoft.com/en-us/windows/windows-11-system-requirements-86c11283-ea52-4782-9efd-7674389a7ba3">Microsoft Support — Windows 11 requirements</a>; <a href="https://www.intel.com/content/www/us/en/products/sku/132223/intel-core-i312100f-processor-12m-cache-up-to-4-30-ghz/specifications.html">Intel i3-12100F specifications</a>.</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>IF usage = office THEN min RAM = 8&nbsp;GB</td>
+    <td><code>usage_needs_ram(office, 8, 0.85)</code></td>
+    <td>Microsoft lists 4&nbsp;GB as the Windows 11 minimum. HP’s published RAM guide treats 8&nbsp;GB as the baseline for basic everyday PCs. The KB uses that 8&nbsp;GB floor. <a href="https://www.microsoft.com/windows/windows-11-specifications">Windows 11 specifications</a>; <a href="https://www.hp.com/us-en/tech-takes/components/buyers-guide/how-much-ram-do-i-need-every-use.html">HP — How much RAM do I need</a>.</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>IF usage = gaming THEN min CPU cores = 6</td>
+    <td><code>usage_needs_cores(gaming, 6, 0.95)</code></td>
+    <td>Intel’s mainstream gaming desktop SKU in this generation is a 6-core Core i5 (i5-12400F). <a href="https://www.intel.com/content/www/us/en/products/sku/134586/intel-core-i512400f-processor-18m-cache-up-to-4-40-ghz/specifications.html">Intel Core i5-12400F specifications</a>.</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td>IF usage = gaming THEN min RAM = 16&nbsp;GB</td>
+    <td><code>usage_needs_ram(gaming, 16, 0.95)</code></td>
+    <td>Steam Hardware Survey: 16&nbsp;GB is the most common installed RAM on gaming PCs. <a href="https://store.steampowered.com/hwsurvey/">Steam Hardware Survey</a>.</td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td>IF usage = programming THEN min CPU cores = 8</td>
+    <td><code>usage_needs_cores(programming, 8, 0.92)</code></td>
+    <td>Microsoft Visual Studio 2022: “Quad-core or better recommended.” The KB uses the next common desktop compile SKU, an 8-core Ryzen 7. <a href="https://learn.microsoft.com/en-us/visualstudio/releases/2022/system-requirements">Visual Studio 2022 system requirements</a>; <a href="https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-7-7700x.html">AMD Ryzen 7 7700X (8 cores)</a>.</td>
+  </tr>
+  <tr>
+    <td>6</td>
+    <td>IF usage = programming THEN min RAM = 16&nbsp;GB</td>
+    <td><code>usage_needs_ram(programming, 16, 0.90)</code></td>
+    <td>“We recommend 16&nbsp;GB RAM for typical professional solutions.” <a href="https://learn.microsoft.com/en-us/visualstudio/releases/2022/system-requirements">Visual Studio 2022 system requirements</a>.</td>
+  </tr>
+  <tr>
+    <td>7</td>
+    <td>IF usage = content_creation THEN min CPU cores = 12</td>
+    <td><code>usage_needs_cores(content_creation, 12, 0.98)</code></td>
+    <td>Adobe Premiere Pro recommended CPUs are current-generation multi-core Ryzen / Intel chips. The KB encodes a 12-core Ryzen 9 class part (7900X). <a href="https://helpx.adobe.com/premiere/desktop/get-started/technical-requirements/adobe-premiere-pro-technical-requirements.html">Adobe Premiere Pro technical requirements</a>; <a href="https://www.amd.com/en/products/processors/desktops/ryzen/7000-series/amd-ryzen-9-7900x.html">AMD Ryzen 9 7900X (12 cores)</a>.</td>
+  </tr>
+  <tr>
+    <td>8</td>
+    <td>IF usage = content_creation THEN min RAM = 32&nbsp;GB</td>
+    <td><code>usage_needs_ram(content_creation, 32, 0.98)</code></td>
+    <td>Adobe Premiere Pro: “32&nbsp;GB or more for 4K and higher.” <a href="https://helpx.adobe.com/premiere/desktop/get-started/technical-requirements/adobe-premiere-pro-technical-requirements.html">Adobe Premiere Pro technical requirements</a>.</td>
+  </tr>
+  <tr>
+    <td>9</td>
+    <td>IF gaming_level = 1080p THEN min GPU tier = budget</td>
+    <td><code>gaming_needs_gpu('1080p', budget, 0.90)</code></td>
+    <td>NVIDIA positions the lower 40-series cards for 1080p / entry 1440p. Encoded as the budget GPU tier in the KB. <a href="https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4070-family/">NVIDIA GeForce RTX 4070 family</a>.</td>
+  </tr>
+  <tr>
+    <td>10</td>
+    <td>IF gaming_level = 1440p THEN min GPU tier = mid_range</td>
+    <td><code>gaming_needs_gpu('1440p', mid_range, 0.95)</code></td>
+    <td>NVIDIA RTX 4070 (mid-range in this KB, 200&nbsp;W TGP) is specified for 1440p gaming power figures. <a href="https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4070-family/">NVIDIA RTX 4070 family</a>.</td>
+  </tr>
+  <tr>
+    <td>11</td>
+    <td>IF gaming_level = 4k THEN min GPU tier = high_end</td>
+    <td><code>gaming_needs_gpu('4k', high_end, 0.98)</code></td>
+    <td>NVIDIA RTX 4080 / 4090 are the 4K cards in this generation. <a href="https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/">NVIDIA GeForce RTX 4090</a>.</td>
+  </tr>
+  <tr>
+    <td>12</td>
+    <td>IF gaming_level = 1080p THEN min PSU hint = 650&nbsp;W</td>
+    <td><code>chaining.pl</code> 1080p → <code>min_psu_wattage, 650</code></td>
+    <td>NVIDIA RTX 4070 required system power: 650&nbsp;W. <a href="https://www.nvidia.com/content/geforce-gtx/GeForce_RTX_4070_QSG_Rev1.pdf">RTX 4070 Quick Start Guide (PDF)</a>.</td>
+  </tr>
+  <tr>
+    <td>13</td>
+    <td>IF gaming_level = 4k THEN min PSU hint = 850&nbsp;W</td>
+    <td><code>chaining.pl</code> 4k → <code>min_psu_wattage, 850</code></td>
+    <td>NVIDIA RTX 4090 required system power: 850&nbsp;W. <a href="https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/">NVIDIA RTX 4090 specifications</a>; <a href="https://nvidia.custhelp.com/app/answers/detail/a_id/5396">NVIDIA — RTX 40 Series power specifications</a>.</td>
+  </tr>
+  <tr>
+    <td>14</td>
+    <td>CPU socket must equal motherboard socket</td>
+    <td><code>compatible_socket(S, S)</code></td>
+    <td>Intel desktop 12th–14th gen use LGA1700; AMD Ryzen 7000 uses AM5. A CPU will not seat on the wrong socket. <a href="https://edc.intel.com/content/www/us/en/design/ipla/software-development-platforms/client/platforms/alder-lake-desktop/12th-generation-intel-core-processors-datasheet-volume-1-of-2/001/introduction/">Intel 12th Gen datasheet — LGA1700</a>; <a href="https://www.amd.com/en/products/processors/chipsets/am5.html">AMD Socket AM5 chipsets</a>.</td>
+  </tr>
+  <tr>
+    <td>15</td>
+    <td>IF socket = am5 THEN RAM type = DDR5</td>
+    <td><code>requires_ram_type(am5, ddr5)</code></td>
+    <td>AMD AM5 platforms are specified with DDR5 only. <a href="https://www.amd.com/en/products/processors/chipsets/am5.html">AMD AM5 chipsets</a>; <a href="https://www.amd.com/content/dam/amd/en/documents/partner-hub/ryzen/amd-socket-am5-quick-reference-guide.pdf">AMD AM5 quick reference (PDF)</a>.</td>
+  </tr>
+  <tr>
+    <td>16</td>
+    <td>IF socket = am4 THEN RAM type = DDR4</td>
+    <td><code>requires_ram_type(am4, ddr4)</code></td>
+    <td>AMD AM4 platforms use DDR4. <a href="https://www.amd.com/en/products/processors/chipsets/am4.html">AMD Socket AM4 chipsets</a>.</td>
+  </tr>
+  <tr>
+    <td>17</td>
+    <td>IF socket = lga1700 THEN RAM type = DDR4 or DDR5 (board-specific)</td>
+    <td><code>requires_ram_type(lga1700, ddr4)</code> and <code>ddr5</code></td>
+    <td>Intel 12th Gen datasheet documents both DDR4 and DDR5 memory interfaces; a given motherboard implements one. <a href="https://edc.intel.com/content/www/us/en/design/ipla/software-development-platforms/client/platforms/alder-lake-desktop/12th-generation-intel-core-processors-datasheet-volume-1-of-2/001/introduction/">Intel 12th Gen datasheet</a>.</td>
+  </tr>
+  <tr>
+    <td>18</td>
+    <td>Required watts = GPU TDP + (CPU cores × 10) + 100; safe PSU = required + 100</td>
+    <td><code>system_power_requirement/3</code> then +100 in <code>recommend_psu</code></td>
+    <td>NVIDIA publishes GPU TGP and a higher “required system power” that already includes the rest of the PC (e.g. 200&nbsp;W TGP → 650&nbsp;W system for RTX 4070; 450&nbsp;W TGP → 850&nbsp;W for RTX 4090). The KB uses TDP + a CPU and overhead term so PSU size tracks the selected CPU and GPU. <a href="https://nvidia.custhelp.com/app/answers/detail/a_id/5396">NVIDIA RTX 40 Series power specifications</a>; <a href="https://www.nvidia.com/content/geforce-gtx/GeForce_RTX_4070_QSG_Rev1.pdf">RTX 4070 QSG — 650&nbsp;W minimum</a>.</td>
+  </tr>
+  <tr>
+    <td>19</td>
+    <td>A budget tier may only buy that tier or cheaper</td>
+    <td><code>can_afford/2</code></td>
+    <td>Intel and AMD sell segmented SKUs (i3/i5/i7/i9, Ryzen 5/7/9). The KB maps that ladder to four tiers. <a href="https://www.intel.com/content/www/us/en/products/details/processors/core.html">Intel Core processor families</a>; <a href="https://www.amd.com/en/products/processors/desktops/ryzen.html">AMD Ryzen desktop processors</a>.</td>
+  </tr>
+  <tr>
+    <td>20</td>
+    <td>Storage type must be NVMe</td>
+    <td><code>recommend.pl</code> <code>Type = nvme</code></td>
+    <td>Microsoft recommends installing Windows and Visual Studio on an SSD. The KB only stocks NVMe SSDs. <a href="https://learn.microsoft.com/en-us/visualstudio/releases/2022/system-requirements">Visual Studio 2022 — “solid-state drive (SSD)”</a>; <a href="https://www.samsung.com/us/computing/memory-storage/solid-state-drives/980-pro-pcie-4-0-nvme-ssd-1tb-mz-v8p1t0b-am/">Samsung 980 PRO NVMe SSD</a>.</td>
+  </tr>
+  <tr>
+    <td>21</td>
+    <td>IF cooling = aio THEN prefer a case with radiator mounts</td>
+    <td><code>scoring.pl</code> AIO + case AIOSupport = yes → +25</td>
+    <td>Corsair documents radiator sizes per case (4000D: 360&nbsp;mm front, 280&nbsp;mm roof). A case without those mounts cannot take an AIO. <a href="https://help.corsair.com/hc/en-us/articles/360052137311-Case-What-is-the-radiator-capacity-of-the-4000D-mid-tower-case">Corsair — 4000D radiator capacity</a>.</td>
+  </tr>
+  <tr>
+    <td>22</td>
+    <td>IF rgb = very_important THEN prefer RGB RAM and cases</td>
+    <td><code>scoring.pl</code> RGB +20 / +10</td>
+    <td>RGB is a published product option (e.g. Corsair Vengeance RGB vs non-RGB). The engine only scores it when the user asks. <a href="https://www.corsair.com/us/en/c/memory/vengeance-rgb-ddr5-memory">Corsair Vengeance RGB DDR5</a>.</td>
+  </tr>
+  <tr>
+    <td>23</td>
+    <td>Pick the motherboard after the CPU</td>
+    <td><code>recommend_build</code> order</td>
+    <td>The socket is a property of the CPU package (Intel LGA1700 / AMD AM4 / AM5). The board is chosen to match that socket. Same Intel and AMD pages as rules 14–17.</td>
+  </tr>
+  <tr>
+    <td>24</td>
+    <td>Pick the PSU after CPU and GPU</td>
+    <td><code>recommend_psu</code> reads selected TDP and cores</td>
+    <td>NVIDIA’s install steps start with “Check your power supply” using the GPU’s required system power, which depends on the rest of the PC. <a href="https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/">NVIDIA RTX 4090 — “Check your power supply”</a>.</td>
+  </tr>
+</table>
+
+<p class="note">Preference bonuses (Intel vs AMD +15, AIO −15 if the case has no radiator) are scoring, not physical laws. The physical constraints (socket, RAM generation, watts) come from the vendor pages above. No expert was interviewed.</p>
+
+<h2>Annex B — Decision logic (as implemented)</h2>
+<p>Entry: <code>recommend_build/0</code> in <code>backend/recommend.pl</code>.</p>
+<pre>recommend_build :-
+    infer_facts,
+    infer_usage_requirements,
+    (user_choice(usage, gaming) -> infer_gaming_requirements ; true),
+    recommend_cpu,
+    recommend_motherboard,
+    recommend_ram,
+    recommend_gpu,
+    recommend_storage,
+    recommend_psu,
+    recommend_case.</pre>
+
+<p>Forward chaining (<code>backend/chaining.pl</code>) writes <code>inferred/2</code> facts from the user’s answers, then <code>requirement/2</code> facts from the tables in <code>match.pl</code>.</p>
+<pre>usage_needs_cores(office, 4, 0.9).
+usage_needs_cores(gaming, 6, 0.95).
+usage_needs_cores(programming, 8, 0.92).
+usage_needs_cores(content_creation, 12, 0.98).
+
+usage_needs_ram(office, 8, 0.85).
+usage_needs_ram(gaming, 16, 0.95).
+usage_needs_ram(programming, 16, 0.90).
+usage_needs_ram(content_creation, 32, 0.98).
+
+gaming_needs_gpu('1080p', budget, 0.90).
+gaming_needs_gpu('1440p', mid_range, 0.95).
+gaming_needs_gpu('4k', high_end, 0.98).
+
+compatible_socket(S, S).
+requires_ram_type(am4, ddr4).
+requires_ram_type(am5, ddr5).
+requires_ram_type(lga1700, ddr4).
+requires_ram_type(lga1700, ddr5).
+
+system_power_requirement(GPUTDP, CPUCores, TotalWatts) :-
+    TotalWatts is GPUTDP + CPUCores * 10 + 100.</pre>
+
+<p>Each recommender: query the KB with filters → score survivors → keep the highest score → store alternatives. CPU filter uses min cores, brand, and <code>can_afford</code>. Motherboard filter uses the selected CPU socket. RAM filter uses the board’s RAM type and min capacity. GPU filter uses gaming tier when usage is gaming. Storage is NVMe only. PSU wattage must be ≥ required + 100; budget may be relaxed so power is never under-sized. Case score adds RGB and AIO bonuses.</p>
+<pre>FinalScore (CPU) = confidence×100 + tierBonus + brandBonus
+confidence (CPU) = (baseScore/100) × usageMultiplier</pre>
+<p>Motherboard, storage, PSU, and case use base score + bonuses (no usage multiplier). Full scoring is in <code>backend/scoring.pl</code>. Explanations are in <code>backend/explanations.pl</code>.</p>
+
+<h2>References</h2>
+<ol>
+  <li>Microsoft, “Windows 11 system requirements.” https://support.microsoft.com/en-us/windows/windows-11-system-requirements-86c11283-ea52-4782-9efd-7674389a7ba3</li>
+  <li>Microsoft, “Windows 11 specifications.” https://www.microsoft.com/windows/windows-11-specifications</li>
+  <li>HP, “How much RAM do I need?” https://www.hp.com/us-en/tech-takes/components/buyers-guide/how-much-ram-do-i-need-every-use.html</li>
+  <li>Microsoft Learn, “Visual Studio 2022 system requirements.” https://learn.microsoft.com/en-us/visualstudio/releases/2022/system-requirements</li>
+  <li>Adobe, “Premiere Pro technical requirements.” https://helpx.adobe.com/premiere/desktop/get-started/technical-requirements/adobe-premiere-pro-technical-requirements.html</li>
+  <li>Intel, 12th Generation Core processors datasheet (LGA1700, DDR4/DDR5). https://edc.intel.com/content/www/us/en/design/ipla/software-development-platforms/client/platforms/alder-lake-desktop/12th-generation-intel-core-processors-datasheet-volume-1-of-2/001/introduction/</li>
+  <li>Intel, Core i3-12100F / Core i5-12400F product specifications.</li>
+  <li>AMD, Socket AM5 chipsets. https://www.amd.com/en/products/processors/chipsets/am5.html</li>
+  <li>AMD, AM5 quick reference PDF. https://www.amd.com/content/dam/amd/en/documents/partner-hub/ryzen/amd-socket-am5-quick-reference-guide.pdf</li>
+  <li>AMD, Socket AM4 chipsets. https://www.amd.com/en/products/processors/chipsets/am4.html</li>
+  <li>NVIDIA, GeForce RTX 4090. https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4090/</li>
+  <li>NVIDIA, RTX 4070 family. https://www.nvidia.com/en-us/geforce/graphics-cards/40-series/rtx-4070-family/</li>
+  <li>NVIDIA, RTX 4070 Quick Start Guide (650&nbsp;W). https://www.nvidia.com/content/geforce-gtx/GeForce_RTX_4070_QSG_Rev1.pdf</li>
+  <li>NVIDIA, “GeForce RTX 40 Series &amp; Power Specifications.” https://nvidia.custhelp.com/app/answers/detail/a_id/5396</li>
+  <li>Valve, Steam Hardware Survey. https://store.steampowered.com/hwsurvey/</li>
+  <li>Corsair, “Radiator capacity of the 4000D.” https://help.corsair.com/hc/en-us/articles/360052137311-Case-What-is-the-radiator-capacity-of-the-4000D-mid-tower-case</li>
+  <li>Samsung, 980 PRO NVMe SSD. https://www.samsung.com/us/computing/memory-storage/solid-state-drives/980-pro-pcie-4-0-nvme-ssd-1tb-mz-v8p1t0b-am/</li>
+</ol>
+
+</body>
+</html>
