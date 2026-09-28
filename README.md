@@ -8,7 +8,7 @@ The system analyzes user requirements (budget, usage, preferences) and returns p
 
 ## Documentation
 
-- Assignment report (PDF): [`PC-Builder-Expert-System-Report.pdf`](./PC-Builder-Expert-System-Report.pdf)
+- Assignment report (PDF): [`214164A - PC-Builder-Expert-System-Report.pdf`](./214164A%20-%20PC-Builder-Expert-System-Report.pdf)
 - API specification: [`openAPI.yml`](./openAPI.yml)
 - Detailed "How it works" guide: [`PCBuilderExpertSystem.md`](./PCBuilderExpertSystem.md)
 
@@ -209,7 +209,7 @@ pc-builder-expert-system/
 
 ├── docs/assignment/screenshots/ # UI screenshots used in this README
 ├── openAPI.yml                  # API specification for backend endpoints
-├── PC-Builder-Expert-System-Report.pdf
+├── 214164A - PC-Builder-Expert-System-Report.pdf
 ├── PCBuilderExpertSystem.md     # Detailed "How it works" guide
 └── README.md
 ```
